@@ -40,10 +40,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
     address private s_recentWinner;
     RaffleState private s_raffleState;
 
-    /* Events */
+    /* Events */    
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
-    
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     constructor(
         uint256 entranceFee,
@@ -79,7 +79,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         view
         returns (bool upkeepNeeded, bytes memory /* performeData */)
     {
-        bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) < i_interval);
+        bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) > i_interval);
         bool isOpen = s_raffleState == RaffleState.OPEN;
         bool hasBalance = address(this).balance > 0;
         bool hasPlayers = s_players.length > 0;
@@ -103,7 +103,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
             // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
             extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({nativePayment: false}))
         });
-        s_vrfCoordinator.requestRandomWords(request);
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        emit RequestedRaffleWinner(requestId);
     }
 
     function fulfillRandomWords(uint256 /*requestId*/, uint256[] calldata randomWords) internal override {
@@ -125,15 +126,24 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /**
      * Getter functions
      */
-    function getEntranceFee() public view returns (uint256) {
+    function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
     }
 
-    function getRaffleState() public view returns (RaffleState) {
+    function getRaffleState() external view returns (RaffleState) {
         return s_raffleState;
     }
 
-    function getPlayer(uint256 index) public view returns (address) {
+    function getPlayer(uint256 index) external view returns (address) {
         return s_players[index];
     }
+
+    function getLastTimeStamp() external view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
+    }
+
 }
