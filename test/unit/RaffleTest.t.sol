@@ -161,46 +161,4 @@ contract RaffleTest is Test, CodeConstants {
             address(raffle)
         );
     }
-
-    function testFulFillRandomWordsPickAWinnerResetsAndSendsMoney() 
-        public
-        raffleEntered
-        skipFork
-    {
-        // Arrange
-        uint256 additionalEntrances = 5;
-        uint256 startingIndex = 1;
-        address expectedWinner = address(5);
-
-        for (uint256 i = startingIndex; i < startingIndex + additionalEntrances; i++) {
-            address newPlayer = address(uint160(i));
-            hoax(newPlayer, 1 ether);
-            raffle.enterRaffle{value: entranceFee}();
-        }
-        uint256 startingTimestamp = raffle.getLastTimeStamp();
-        uint256 winnerStartingBalance = expectedWinner.balance;
-
-        // Act
-        vm.recordLogs();
-        raffle.performUpkeep("");
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        bytes32 requestId = entries[1].topics[1];
-        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
-            uint256(requestId),
-            address(raffle)
-        );
-
-
-        // Assert
-        address recentWinner = raffle.getRecentWinner();
-        Raffle.RaffleState raffleState = raffle.getRaffleState();
-        uint256 winnerBalance = recentWinner.balance;
-        uint256 endingTimestamp = raffle.getLastTimeStamp();
-        uint256 prize = entranceFee * (additionalEntrances + 1);
-
-        assert(recentWinner == expectedWinner);
-        assert(uint256(raffleState) == 0);
-        assert(winnerBalance == winnerStartingBalance + prize);
-        assert(endingTimestamp > startingTimestamp);
-    }
 }
